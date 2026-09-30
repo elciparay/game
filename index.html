@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tangkap Kotak</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #111827;
+  color: white;
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+
+.game {
+  width: min(440px, 100%);
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 12px;
+}
+
+.hud {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.stat {
+  flex: 1;
+  padding: 9px;
+  background: #1f2937;
+  border-radius: 10px;
+}
+
+.board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: linear-gradient(#dbeafe, #f8fafc);
+  border: 4px solid #374151;
+  border-radius: 14px;
+}
+
+.player {
+  position: absolute;
+  bottom: 18px;
+  width: 64px;
+  height: 24px;
+  border-radius: 7px;
+  background: #2563eb;
+}
+
+.target {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #f59e0b;
+  transform: rotate(45deg);
+}
+
+.message {
+  height: 30px;
+  padding: 7px;
+  color: #d1d5db;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+button {
+  min-width: 64px;
+  min-height: 46px;
+  border: 0;
+  border-radius: 10px;
+  background: #374151;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+#restart {
+  padding: 0 20px;
+  font-size: 15px;
+  background: #16a34a;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+  <h1>🎮 Tangkap Kotak</h1>
+
+  <div class="hud">
+    <div class="stat">
+      Skor: <b id="score">0</b>
+    </div>
+
+    <div class="stat">
+      Nyawa: <b id="lives">3</b>
+    </div>
+
+    <div class="stat">
+      Level: <b id="level">1</b>
+    </div>
+  </div>
+
+  <div id="board" class="board">
+    <div id="player" class="player"></div>
+  </div>
+
+  <div id="message" class="message">
+    Tangkap kotak yang jatuh!
+  </div>
+
+  <div class="controls">
+    <button id="left">←</button>
+    <button id="restart">Mulai Ulang</button>
+    <button id="right">→</button>
+  </div>
+
+</div>
+
+<script>
+
+const board = document.getElementById("board");
+const player = document.getElementById("player");
+
+const scoreText = document.getElementById("score");
+const livesText = document.getElementById("lives");
+const levelText = document.getElementById("level");
+const message = document.getElementById("message");
+
+let score = 0;
+let lives = 3;
+let level = 1;
+
+let playerX = 0;
+
+let objects = [];
+
+let running = true;
+
+let leftPressed = false;
+let rightPressed = false;
+
+let lastTime = 0;
+let spawnTimer = 0;
+
+
+function resetGame() {
+
+  objects.forEach(obj => {
+    obj.el.remove();
+  });
+
+  objects = [];
+
+  score = 0;
+  lives = 3;
+  level = 1;
+
+  running = true;
+  spawnTimer = 0;
+
+  playerX = (board.clientWidth - 64) / 2;
+
+  player.style.left = playerX + "px";
+
+  scoreText.textContent = score;
+  livesText.textContent = lives;
+  levelText.textContent = level;
+
+  message.textContent = "Tangkap kotak yang jatuh!";
+}
+
+
+function spawnObject() {
+
+  const el = document.createElement("div");
+
+  el.className = "target";
+
+  board.appendChild(el);
+
+  const size = 26;
+
+  const x =
+    Math.random() *
+    Math.max(1, board.clientWidth - size);
+
+  const obj = {
+
+    el: el,
+
+    x: x,
+
+    y: -35,
+
+    size: size,
+
+    speed: 120 + level * 18
+  };
+
+  el.style.left = x + "px";
+
+  el.style.top = obj.y + "px";
+
+  objects.push(obj);
+}
+
+
+function collision(obj) {
+
+  const playerY = board.clientHeight - 42;
+
+  return (
+
+    playerX < obj.x + obj.size &&
+
+    playerX + 64 > obj.x &&
+
+    playerY < obj.y + obj.size &&
+
+    playerY + 24 > obj.y
+
+  );
+}
+
+
+function gameOver() {
+
+  running = false;
+
+  message.textContent =
+    "GAME OVER — Skor: " + score;
+}
+
+
+function gameLoop(time) {
+
+  const dt =
+    Math.min(
+      0.035,
+      (time - lastTime) / 1000 || 0
+    );
+
+  lastTime = time;
+
+
+  if (running) {
+
+    if (leftPressed) {
+
+      playerX -= 260 * dt;
+
+    }
+
+
+    if (rightPressed) {
+
+      playerX += 260 * dt;
+
+    }
+
+
+    playerX =
+      Math.max(
+        0,
+        Math.min(
+          board.clientWidth - 64,
+          playerX
+        )
+      );
+
+
+    player.style.left =
+      playerX + "px";
+
+
+    spawnTimer += dt;
+
+
+    const interval =
+      Math.max(
+        0.35,
+        0.9 - level * 0.06
+      );
+
+
+    if (spawnTimer >= interval) {
+
+      spawnTimer = 0;
+
+      spawnObject();
+
+    }
+
+
+    for (
+      let i = objects.length - 1;
+      i >= 0;
+      i--
+    ) {
+
+      const obj = objects[i];
+
+
+      obj.y += obj.speed * dt;
+
+      obj.el.style.top =
+        obj.y + "px";
+
+
+      if (collision(obj)) {
+
+        score++;
+
+        level =
+          1 + Math.floor(score / 10);
+
+        scoreText.textContent =
+          score;
+
+        levelText.textContent =
+          level;
+
+        obj.el.remove();
+
+        objects.splice(i, 1);
+
+      }
+
+
+      else if (
+        obj.y > board.clientHeight
+      ) {
+
+        lives--;
+
+        livesText.textContent =
+          lives;
+
+        obj.el.remove();
+
+        objects.splice(i, 1);
+
+
+        if (lives <= 0) {
+
+          gameOver();
+
+          break;
+
+        }
+
+      }
+
+    }
+
+  }
+
+
+  requestAnimationFrame(gameLoop);
+
+}
+
+
+function holdButton(button, direction) {
+
+  button.addEventListener(
+    "pointerdown",
+    function(e) {
+
+      e.preventDefault();
+
+      if (direction === "left") {
+
+        leftPressed = true;
+
+      } else {
+
+        rightPressed = true;
+
+      }
+
+    }
+  );
+
+
+  [
+    "pointerup",
+    "pointerleave",
+    "pointercancel"
+  ].forEach(event => {
+
+    button.addEventListener(
+      event,
+      function() {
+
+        if (direction === "left") {
+
+          leftPressed = false;
+
+        } else {
+
+          rightPressed = false;
+
+        }
+
+      }
+    );
+
+  });
+
+}
+
+
+holdButton(
+  document.getElementById("left"),
+  "left"
+);
+
+
+holdButton(
+  document.getElementById("right"),
+  "right"
+);
+
+
+document
+  .getElementById("restart")
+  .addEventListener(
+    "click",
+    resetGame
+  );
+
+
+document.addEventListener(
+  "keydown",
+  function(e) {
+
+    if (e.key === "ArrowLeft") {
+
+      leftPressed = true;
+
+      e.preventDefault();
+
+    }
+
+
+    if (e.key === "ArrowRight") {
+
+      rightPressed = true;
+
+      e.preventDefault();
+
+    }
+
+  }
+);
+
+
+document.addEventListener(
+  "keyup",
+  function(e) {
+
+    if (e.key === "ArrowLeft") {
+
+      leftPressed = false;
+
+    }
+
+
+    if (e.key === "ArrowRight") {
+
+      rightPressed = false;
+
+    }
+
+  }
+);
+
+
+window.addEventListener(
+  "resize",
+  function() {
+
+    playerX =
+      Math.max(
+        0,
+        Math.min(
+          board.clientWidth - 64,
+          playerX
+        )
+      );
+
+    player.style.left =
+      playerX + "px";
+
+  }
+);
+
+
+resetGame();
+
+requestAnimationFrame(gameLoop);
+
+</script>
+
+</body>
+</html>
